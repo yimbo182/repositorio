@@ -1,0 +1,960 @@
+"""
+Módulo de integración con navegadores y deep linking
+Gestiona la apertura automática de navegadores y videos de YouTube
+"""
+
+import os
+import logging
+import webbrowser
+import subprocess
+import platform
+from typing import Optional, Dict, Any
+from urllib.parse import urlparse, parse_qs
+import json
+
+logger = logging.getLogger(__name__)
+
+class BrowserIntegration:
+    """
+    Gestor de integración con navegadores y deep linking
+    """
+    
+    def __init__(self, config_manager):
+        """
+        Inicializa la integración con navegadores
+        
+        Args:
+            config_manager: Instancia del gestor de configuraciones
+        """
+        self.config_manager = config_manager
+        self.browser_commands = self._detect_browsers()
+        self.deep_link_protocols = self._setup_deep_link_protocols()
+    
+    def _detect_browsers(self) -> Dict[str, str]:
+        """
+        Detecta navegadores disponibles en el sistema
+        
+        Returns:
+            Diccionario con nombres de navegadores y sus comandos
+        """
+        browsers = {}
+        system = platform.system()
+        
+        if system == "Android":
+            # Comandos para Android
+            browsers.update({
+                "brave": "com.brave.browser",
+                "chrome": "com.android.chrome",
+                "firefox": "org.mozilla.firefox",
+                "default": "android.intent.action.VIEW"
+            })
+        elif system == "Darwin":  # macOS
+            browsers.update({
+                "brave": "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
+                "chrome": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+                "safari": "open -a Safari",
+                "default": "open"
+            })
+        elif system == "Windows":
+            browsers.update({
+                "brave": "C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe",
+                "chrome": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+                "edge": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+                "default": "start"
+            })
+        else:  # Linux
+            browsers.update({
+                "brave": "brave-browser",
+                "chrome": "google-chrome",
+                "firefox": "firefox",
+                "default": "xdg-open"
+            })
+        
+        return browsers
+    
+    def _setup_deep_link_protocols(self) -> Dict[str, str]:
+        """
+        Configura los protocolos de deep linking
+        
+        Returns:
+            Diccionario con protocolos de deep linking
+        """
+        return {
+            "brave": "brave://",
+            "chrome": "googlechrome://",
+            "firefox": "firefox://",
+            "youtube": "yt://",
+            "http": "http://",
+            "https": "https://"
+        }
+    
+    def open_url(self, url: str, browser: str = None, fullscreen: bool = False) -> bool:
+        """
+        Abre una URL en el navegador especificado
+        
+        Args:
+            url: URL a abrir
+            browser: Navegador preferido (brave, chrome, etc.)
+            fullscreen: Si debe abrir en pantalla completa
+            
+        Returns:
+            True si se abrió correctamente
+        """
+        try:
+            if not browser:
+                browser = self.config_manager.get('browser', 'default_browser', 'brave')
+            
+            # Validar URL
+            if not self._is_valid_url(url):
+                logger.error(f"URL inválida: {url}")
+                return False
+            
+            # Detectar el tipo de navegador
+            browser_type = self._determine_browser_type(url, browser)
+            
+            # Configurar opciones adicionales
+            browser_options = self._get_browser_options(fullscreen)
+            
+            # Intentar abrir con el navegador específico
+            if self._open_specific_browser(url, browser_type, browser_options):
+                logger.info(f"URL abierta en {browser_type}: {url}")
+                return True
+            
+            # Si falla, usar navegador por defecto
+            if browser_type != "default":
+                logger.warning(f"No se pudo abrir con {browser_type}, usando navegador por defecto")
+                if self._open_default_browser(url):
+                    logger.info(f"URL abierta en navegador por defecto: {url}")
+                    return True
+            
+            return False
+            
+        except Exception as e:
+            logger.error(f"Error abriendo URL {url}: {e}")
+            return False
+    
+    def _is_valid_url(self, url: str) -> bool:
+        """
+        Valida si una URL es válida
+        
+        Args:
+            url: URL a validar
+            
+        Returns:
+            True si la URL es válida
+        """
+        try:
+            result = urlparse(url)
+            return all([result.scheme, result.netloc])
+        except Exception:
+            return False
+    
+    def _determine_browser_type(self, url: str, preferred_browser: str) -> str:
+        """
+        Determina el tipo de navegador a usar basado en la URL y preferencias
+        
+        Args:
+            url: URL a abrir
+            preferred_browser: Navegador preferido
+            
+        Returns:
+            Tipo de navegador a usar
+        """
+        # Si es una URL de YouTube, preferir navegadores que soporten mejor YouTube
+        if "youtube.com" in url or "youtu.be" in url:
+            if preferred_browser == "brave" and "brave" in self.browser_commands:
+                return "brave"
+            elif "chrome" in self.browser_commands:
+                return "chrome"
+        
+        # Usar el navegador preferido si está disponible
+        if preferred_browser in self.browser_commands:
+            return preferred_browser
+        
+        # Buscar navegadores alternativos
+        for browser in ["brave", "chrome", "firefox", "default"]:
+            if browser in self.browser_commands:
+                return browser
+        
+        return "default"
+    
+    def _get_browser_options(self, fullscreen: bool) -> Dict[str, Any]:
+        """
+        Obtiene opciones específicas para el navegador
+        
+        Args:
+            fullscreen: Si debe abrir en pantalla completa
+            
+        Returns:
+            Diccionario con opciones del navegador
+        """
+        options = {}
+        
+        if fullscreen:
+            if platform.system() == "Android":
+                options["presentation"] = "fullscreen"
+            else:
+                options["window_size"] = (1920, 1080)
+        
+        return options
+    
+    def _open_specific_browser(self, url: str, browser: str, options: Dict[str, Any]) -> bool:
+        """
+        Abre URL en un navegador específico
+        
+        Args:
+            url: URL a abrir
+            browser: Navegador específico
+            options: Opciones del navegador
+            
+        Returns:
+            True si se abrió correctamente
+        """
+        try:
+            if browser not in self.browser_commands:
+                return False
+            
+            system = platform.system()
+            
+            if system == "Android":
+                return self._open_android_browser(url, browser, options)
+            elif system == "Darwin":  # macOS
+                return self._open_macos_browser(url, browser, options)
+            elif system == "Windows":
+                return self._open_windows_browser(url, browser, options)
+            else:  # Linux
+                return self._open_linux_browser(url, browser, options)
+                
+        except Exception as e:
+            logger.error(f"Error abriendo navegador específico {browser}: {e}")
+            return False
+    
+    def _open_android_browser(self, url: str, browser: str, options: Dict[str, Any]) -> bool:
+        """
+        Abre URL en navegador Android
+        
+        Args:
+            url: URL a abrir
+            browser: Navegador Android
+            options: Opciones específicas de Android
+            
+        Returns:
+            True si se abrió correctamente
+        """
+        try:
+            # Usar intents de Android para abrir navegadores específicos
+            if browser == "brave":
+                # Brave browser
+                intent_url = f"intent://open?url={url}#Intent;scheme=https;package=com.brave.browser;end"
+                os.system(f"am start -a android.intent.action.VIEW -d '{intent_url}'")
+                return True
+            elif browser == "chrome":
+                # Google Chrome
+                os.system(f"am start -a android.intent.action.VIEW -d '{url}' -n com.android.chrome/.MainActivity")
+                return True
+            else:
+                # Navegador por defecto
+                os.system(f"am start -a android.intent.action.VIEW -d '{url}'")
+                return True
+                
+        except Exception as e:
+            logger.error(f"Error en Android browser {browser}: {e}")
+            return False
+    
+    def _open_macos_browser(self, url: str, browser: str, options: Dict[str, Any]) -> bool:
+        """
+        Abre URL en navegador macOS
+        
+        Args:
+            url: URL a abrir
+            browser: Navegador macOS
+            options: Opciones específicas de macOS
+            
+        Returns:
+            True si se abrió correctamente
+        """
+        try:
+            command = self.browser_commands[browser]
+            
+            if browser == "brave":
+                subprocess.run([command, url], check=True)
+                return True
+            elif browser == "chrome":
+                subprocess.run([command, url], check=True)
+                return True
+            else:
+                # Usar comando 'open' para otros navegadores
+                subprocess.run([command, url], check=True)
+                return True
+                
+        except Exception as e:
+            logger.error(f"Error en macOS browser {browser}: {e}")
+            return False
+    
+    def _open_windows_browser(self, url: str, browser: str, options: Dict[str, Any]) -> bool:
+        """
+        Abre URL en navegador Windows
+        
+        Args:
+            url: URL a abrir
+            browser: Navegador Windows
+            options: Opciones específicas de Windows
+            
+        Returns:
+            True si se abrió correctamente
+        """
+        try:
+            command = self.browser_commands[browser]
+            
+            if browser == "brave":
+                subprocess.run([command, url], check=True)
+                return True
+            elif browser == "chrome":
+                subprocess.run([command, url], check=True)
+                return True
+            else:
+                # Usar comando 'start' para otros navegadores
+                os.system(f'start "" "{url}"')
+                return True
+                
+        except Exception as e:
+            logger.error(f"Error en Windows browser {browser}: {e}")
+            return False
+    
+    def _open_linux_browser(self, url: str, browser: str, options: Dict[str, Any]) -> bool:
+        """
+        Abre URL en navegador Linux
+        
+        Args:
+            url: URL a abrir
+            browser: Navegador Linux
+            options: Opciones específicas de Linux
+            
+        Returns:
+            True si se abrió correctamente
+        """
+        try:
+            command = self.browser_commands[browser]
+            
+            if browser == "brave":
+                subprocess.run([command, url], check=True)
+                return True
+            elif browser == "chrome":
+                subprocess.run([command, url], check=True)
+                return True
+            else:
+                # Usar xdg-open para otros navegadores
+                os.system(f"xdg-open '{url}'")
+                return True
+                
+        except Exception as e:
+            logger.error(f"Error en Linux browser {browser}: {e}")
+            return False
+    
+    def _open_default_browser(self, url: str) -> bool:
+        """
+        Abre URL en el navegador por defecto del sistema
+        
+        Args:
+            url: URL a abrir
+            
+        Returns:
+            True si se abrió correctamente
+        """
+        try:
+            webbrowser.open(url)
+            return True
+        except Exception as e:
+            logger.error(f"Error abriendo navegador por defecto: {e}")
+            return False
+    
+    def open_youtube_video(self, video_id: str, browser: str = None, autoplay: bool = True) -> bool:
+        """
+        Abre un video de YouTube específico
+        
+        Args:
+            video_id: ID del video de YouTube
+            browser: Navegador preferido
+            autoplay: Si debe reproducir automáticamente
+            
+        Returns:
+            True si se abrió correctamente
+        """
+        try:
+            # Crear URL de YouTube
+            youtube_url = f"https://www.youtube.com/watch?v={video_id}"
+            
+            if autoplay:
+                youtube_url += "&autoplay=1"
+            
+            # Intentar abrir con navegador específico para YouTube
+            if not browser:
+                browser = "brave"  # Brave tiene buen soporte para YouTube
+            
+            return self.open_url(youtube_url, browser, fullscreen=True)
+            
+        except Exception as e:
+            logger.error(f"Error abriendo video de YouTube {video_id}: {e}")
+            return False
+    
+    def extract_youtube_video_id(self, youtube_url: str) -> Optional[str]:
+        """
+        Extrae el ID de video de una URL de YouTube
+        
+        Args:
+            youtube_url: URL de YouTube
+            
+        Returns:
+            ID del video o None si no se puede extraer
+        """
+        try:
+            parsed_url = urlparse(youtube_url)
+            
+            # Para URLs de formato: https://www.youtube.com/watch?v=VIDEO_ID
+            if "youtube.com" in parsed_url.netloc:
+                query_params = parse_qs(parsed_url.query)
+                if "v" in query_params:
+                    return query_params["v"][0]
+            
+            # Para URLs cortas: https://youtu.be/VIDEO_ID
+            if "youtu.be" in parsed_url.netloc:
+                video_id = parsed_url.path.lstrip("/")
+                if video_id:
+                    return video_id
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error extrayendo video ID de {youtube_url}: {e}")
+            return None
+    
+    def create_deep_link(self, url: str, browser: str = "brave") -> str:
+        """
+        Crea un deep link específico para un navegador
+        
+        Args:
+            url: URL original
+            browser: Navegador objetivo
+            
+        Returns:
+            Deep link formateado
+        """
+        try:
+            if browser == "brave":
+                return f"brave://open?url={url}"
+            elif browser == "chrome":
+                return f"googlechrome://{url}"
+            elif browser == "firefox":
+                return f"firefox://open-url?url={url}"
+            else:
+                return url  # URL normal como fallback
+                
+        except Exception as e:
+            logger.error(f"Error creando deep link para {browser}: {e}")
+            return url
+    
+    def is_browser_available(self, browser: str) -> bool:
+        """
+        Verifica si un navegador específico está disponible
+        
+        Args:
+            browser: Nombre del navegador
+            
+        Returns:
+            True si el navegador está disponible
+        """
+        return browser in self.browser_commands and os.path.exists(self.browser_commands[browser]) if self.browser_commands[browser] else True
+    
+    def get_available_browsers(self) -> list:
+        """
+        Obtiene lista de navegadores disponibles
+        
+        Returns:
+            Lista de navegadores disponibles
+        """
+        available = []
+        for browser in self.browser_commands:
+            if self.is_browser_available(browser):
+                available.append(browser)
+        return available
+    
+    def set_browser_preference(self, browser: str) -> bool:
+        """
+        Establece el navegador preferido
+        
+        Args:
+            browser: Navegador preferido
+            
+        Returns:
+            True si se estableció correctamente
+        """
+        if browser not in self.browser_commands:
+            logger.error(f"Navegador no disponible: {browser}")
+            return False
+        
+        self.config_manager.set('browser', 'default_browser', browser)
+        logger.info(f"Navegador preferido establecido: {browser}")
+        return True
+    
+    def test_browser_integration(self, browser: str = None) -> Dict[str, Any]:
+        """
+        Prueba la integración con navegadores
+        
+        Args:
+            browser: Navegador a probar (None para todos)
+            
+        Returns:
+            Resultado de las pruebas
+        """
+        results = {
+            "test_time": None,
+            "browsers_tested": [],
+            "success_rate": 0,
+            "errors": []
+        }
+        
+        try:
+            import datetime
+            results["test_time"] = datetime.datetime.now().isoformat()
+            
+            if browser:
+                browsers_to_test = [browser]
+            else:
+                browsers_to_test = list(self.browser_commands.keys())
+            
+            successful_tests = 0
+            total_tests = len(browsers_to_test)
+            
+            for test_browser in browsers_to_test:
+                results["browsers_tested"].append({
+                    "browser": test_browser,
+                    "available": self.is_browser_available(test_browser),
+                    "test_result": "success" if self.is_browser_available(test_browser) else "failed"
+                })
+                
+                if self.is_browser_available(test_browser):
+                    successful_tests += 1
+            
+            results["success_rate"] = (successful_tests / total_tests * 100) if total_tests > 0 else 0
+            
+        except Exception as e:
+            results["errors"].append(str(e))
+        
+        return results
+
+class AudioManager:
+    """
+    Gestor de audio para reproducir sonidos de alarmas y música de fondo
+    """
+    
+    def __init__(self, config_manager):
+        """
+        Inicializa el gestor de audio
+        
+        Args:
+            config_manager: Instancia del gestor de configuraciones
+        """
+        self.config_manager = config_manager
+        self.current_volume = 80
+        self.is_playing = False
+        self.background_player = None
+        self.sound_files = self._scan_sound_files()
+    
+    def _scan_sound_files(self) -> Dict[str, str]:
+        """
+        Escanea archivos de sonido disponibles
+        
+        Returns:
+            Diccionario con archivos de sonido disponibles
+        """
+        sound_dir = os.path.join(os.getcwd(), "sounds")
+        sound_files = {}
+        
+        if os.path.exists(sound_dir):
+            for file in os.listdir(sound_dir):
+                if file.endswith(('.mp3', '.wav', '.ogg', '.m4a')):
+                    file_path = os.path.join(sound_dir, file)
+                    sound_files[file[:-4]] = file_path  # Sin extensión
+        
+        # Añadir sonidos por defecto
+        sound_files.update({
+            "default": "default_alarm",
+            "gentle": "gentle_chime",
+            "energetic": "energetic_beep",
+            "nature": "nature_sounds"
+        })
+        
+        return sound_files
+    
+    def play_alarm_sound(self, sound_name: str = None, volume: int = None) -> bool:
+        """
+        Reproduce el sonido de alarma
+        
+        Args:
+            sound_name: Nombre del archivo de sonido
+            volume: Volumen (0-100)
+            
+        Returns:
+            True si se reprodujo correctamente
+        """
+        try:
+            if sound_name is None:
+                sound_name = self.config_manager.get('audio', 'alarm_sound', 'default')
+            
+            if volume is None:
+                volume = self.config_manager.get('audio', 'alarm_volume', 80)
+            
+            if not self._has_audio_support():
+                logger.warning("No se puede reproducir audio: falta soporte")
+                return False
+            
+            # Determinar archivo de sonido
+            sound_file = self._get_sound_file_path(sound_name)
+            if not sound_file:
+                logger.error(f"Archivo de sonido no encontrado: {sound_name}")
+                return False
+            
+            # Reproducir sonido
+            success = self._play_sound_file(sound_file, volume)
+            
+            if success:
+                self.is_playing = True
+                self.current_volume = volume
+                logger.info(f"Sonido de alarma reproducido: {sound_name}")
+            
+            return success
+            
+        except Exception as e:
+            logger.error(f"Error reproduciendo sonido de alarma: {e}")
+            return False
+    
+    def play_background_music(self, music_url: str = None, volume: int = None) -> bool:
+        """
+        Reproduce música de fondo
+        
+        Args:
+            music_url: URL o ruta del archivo de música
+            volume: Volumen de reproducción
+            
+        Returns:
+            True si se reprodujo correctamente
+        """
+        try:
+            if volume is None:
+                volume = self.config_manager.get('audio', 'snooze_volume', 60)
+            
+            # Para música de fondo, usar reproductor web o streaming
+            if music_url and music_url.startswith(('http://', 'https://')):
+                return self._stream_background_music(music_url, volume)
+            else:
+                # Reproducir archivo local
+                if music_url and os.path.exists(music_url):
+                    return self._play_local_music(music_url, volume)
+                else:
+                    logger.warning("No se especificó música de fondo válida")
+                    return False
+                    
+        except Exception as e:
+            logger.error(f"Error reproduciendo música de fondo: {e}")
+            return False
+    
+    def stop_audio(self):
+        """
+        Detiene la reproducción de audio
+        """
+        try:
+            if self.is_playing:
+                # Implementar lógica específica por plataforma
+                if platform.system() == "Android":
+                    self._stop_android_audio()
+                elif platform.system() == "Darwin":  # macOS
+                    self._stop_macos_audio()
+                elif platform.system() == "Windows":
+                    self._stop_windows_audio()
+                else:  # Linux
+                    self._stop_linux_audio()
+                
+                self.is_playing = False
+                logger.info("Audio detenido")
+                
+        except Exception as e:
+            logger.error(f"Error deteniendo audio: {e}")
+    
+    def set_volume(self, volume: int):
+        """
+        Establece el volumen de audio
+        
+        Args:
+            volume: Volumen (0-100)
+        """
+        try:
+            self.current_volume = max(0, min(100, volume))
+            
+            if platform.system() == "Android":
+                self._set_android_volume(self.current_volume)
+            elif platform.system() == "Darwin":  # macOS
+                self._set_macos_volume(self.current_volume)
+            elif platform.system() == "Windows":
+                self._set_windows_volume(self.current_volume)
+            else:  # Linux
+                self._set_linux_volume(self.current_volume)
+            
+            logger.info(f"Volumen establecido en {self.current_volume}%")
+            
+        except Exception as e:
+            logger.error(f"Error estableciendo volumen: {e}")
+    
+    def _has_audio_support(self) -> bool:
+        """
+        Verifica si el sistema soporta audio
+        
+        Returns:
+            True si hay soporte de audio
+        """
+        try:
+            # Verificar disponibilidad de herramientas de audio
+            import platform
+            system = platform.system()
+            
+            if system == "Android":
+                return os.path.exists("/system/bin/mediaserver")
+            elif system == "Darwin":
+                return os.path.exists("/usr/bin/afplay")
+            elif system == "Windows":
+                return os.path.exists("C:\\Windows\\System32\\WindowsMediaPlayer.dll")
+            else:  # Linux
+                return os.path.exists("/usr/bin/aplay") or os.path.exists("/usr/bin/ffplay")
+                
+        except Exception:
+            return False
+    
+    def _get_sound_file_path(self, sound_name: str) -> Optional[str]:
+        """
+        Obtiene la ruta del archivo de sonido
+        
+        Args:
+            sound_name: Nombre del sonido
+            
+        Returns:
+            Ruta del archivo o None si no existe
+        """
+        if sound_name in self.sound_files:
+            return self.sound_files[sound_name]
+        
+        # Buscar archivo local
+        sound_dir = os.path.join(os.getcwd(), "sounds")
+        for extension in ['.mp3', '.wav', '.ogg', '.m4a']:
+            file_path = os.path.join(sound_dir, f"{sound_name}{extension}")
+            if os.path.exists(file_path):
+                return file_path
+        
+        return None
+    
+    def _play_sound_file(self, file_path: str, volume: int) -> bool:
+        """
+        Reproduce un archivo de sonido específico
+        
+        Args:
+            file_path: Ruta del archivo
+            volume: Volumen de reproducción
+            
+        Returns:
+            True si se reprodujo correctamente
+        """
+        try:
+            if not os.path.exists(file_path):
+                return False
+            
+            # Usar el reproductor apropiado según la plataforma
+            system = platform.system()
+            
+            if system == "Android":
+                return self._play_android_audio(file_path, volume)
+            elif system == "Darwin":
+                return self._play_macos_audio(file_path, volume)
+            elif system == "Windows":
+                return self._play_windows_audio(file_path, volume)
+            else:  # Linux
+                return self._play_linux_audio(file_path, volume)
+                
+        except Exception as e:
+            logger.error(f"Error reproduciendo archivo {file_path}: {e}")
+            return False
+    
+    def _play_android_audio(self, file_path: str, volume: int) -> bool:
+        """
+        Reproduce audio en Android
+        
+        Args:
+            file_path: Ruta del archivo
+            volume: Volumen de reproducción
+            
+        Returns:
+            True si se reprodujo correctamente
+        """
+        try:
+            # Usar MediaPlayer de Android
+            from plyer import audio
+            
+            if hasattr(audio, 'play'):
+                audio.play(file_path)
+                return True
+            
+            return False
+            
+        except Exception:
+            return False
+    
+    def _play_macos_audio(self, file_path: str, volume: int) -> bool:
+        """
+        Reproduce audio en macOS
+        
+        Args:
+            file_path: Ruta del archivo
+            volume: Volumen de reproducción
+            
+        Returns:
+            True si se reprodujo correctamente
+        """
+        try:
+            import subprocess
+            subprocess.run(["afplay", file_path], check=True, timeout=30)
+            return True
+        except Exception:
+            return False
+    
+    def _play_windows_audio(self, file_path: str, volume: int) -> bool:
+        """
+        Reproduce audio en Windows
+        
+        Args:
+            file_path: Ruta del archivo
+            volume: Volumen de reproducción
+            
+        Returns:
+            True si se reprodujo correctamente
+        """
+        try:
+            import winsound
+            winsound.PlaySound(file_path, winsound.SND_FILENAME | winsound.SND_ASYNC)
+            return True
+        except Exception:
+            return False
+    
+    def _play_linux_audio(self, file_path: str, volume: int) -> bool:
+        """
+        Reproduce audio en Linux
+        
+        Args:
+            file_path: Ruta del archivo
+            volume: Volumen de reproducción
+            
+        Returns:
+            True si se reprodujo correctamente
+        """
+        try:
+            import subprocess
+            subprocess.run(["aplay", file_path], check=True, timeout=30)
+            return True
+        except Exception:
+            try:
+                subprocess.run(["ffplay", "-autoexit", file_path], check=True, timeout=30)
+                return True
+            except Exception:
+                return False
+    
+    # Métodos auxiliares para detener audio por plataforma
+    def _stop_android_audio(self):
+        """Detiene audio en Android"""
+        try:
+            from plyer import audio
+            if hasattr(audio, 'stop'):
+                audio.stop()
+        except Exception:
+            pass
+    
+    def _stop_macos_audio(self):
+        """Detiene audio en macOS"""
+        try:
+            subprocess.run(["pkill", "afplay"], check=False)
+        except Exception:
+            pass
+    
+    def _stop_windows_audio(self):
+        """Detiene audio en Windows"""
+        try:
+            import winsound
+            winsound.PlaySound(None, winsound.SND_PURGE)
+        except Exception:
+            pass
+    
+    def _stop_linux_audio(self):
+        """Detiene audio en Linux"""
+        try:
+            subprocess.run(["pkill", "-f", "aplay"], check=False)
+            subprocess.run(["pkill", "-f", "ffplay"], check=False)
+        except Exception:
+            pass
+    
+    def _set_android_volume(self, volume: int):
+        """Establece volumen en Android"""
+        # Implementar con AudioManager de Android
+        pass
+    
+    def _set_macos_volume(self, volume: int):
+        """Establece volumen en macOS"""
+        try:
+            import subprocess
+            volume_cmd = f"osascript -e 'set volume output volume {volume}'"
+            subprocess.run(volume_cmd, shell=True, check=True)
+        except Exception:
+            pass
+    
+    def _set_windows_volume(self, volume: int):
+        """Establece volumen en Windows"""
+        try:
+            import subprocess
+            subprocess.run(["nircmd", "setsysvolume", str(volume * 655)], check=False)
+        except Exception:
+            pass
+    
+    def _set_linux_volume(self, volume: int):
+        """Establece volumen en Linux"""
+        try:
+            import subprocess
+            subprocess.run(["pactl", "set-sink-volume", "@DEFAULT_SINK@", f"{volume}%"], check=False)
+        except Exception:
+            pass
+    
+    def _stream_background_music(self, music_url: str, volume: int) -> bool:
+        """
+        Reproduce música de fondo desde streaming
+        
+        Args:
+            music_url: URL de streaming
+            volume: Volumen de reproducción
+            
+        Returns:
+            True si se reprodujo correctamente
+        """
+        try:
+            # Usar navegador para reproducir streaming
+            browser_manager = BrowserIntegration(self.config_manager)
+            return browser_manager.open_url(music_url, fullscreen=False)
+            
+        except Exception as e:
+            logger.error(f"Error en streaming de música: {e}")
+            return False
+    
+    def _play_local_music(self, music_file: str, volume: int) -> bool:
+        """
+        Reproduce música local
+        
+        Args:
+            music_file: Archivo de música
+            volume: Volumen de reproducción
+            
+        Returns:
+            True si se reprodujo correctamente
+        """
+        return self._play_sound_file(music_file, volume)

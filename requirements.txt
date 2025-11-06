@@ -1,0 +1,9 @@
+kivy==2.3.0
+plyer==2.1.0
+kivymd==1.1.1
+plyer-hardware-backends==1.0.3
+kivy-garden==0.1.5
+python-dateutil==2.8.2
+croniter==1.0.15
+kivymd-icondefs
+cryptography==41.0.7
