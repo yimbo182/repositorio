@@ -137,6 +137,7 @@ class Alarm:
     def should_trigger(self, current_time: datetime) -> bool:
         """
         Determina si la alarma debe activarse en el tiempo dado
+        Verifica la hora actual del sistema contra la hora programada
         
         Args:
             current_time: Tiempo actual a verificar
@@ -147,13 +148,43 @@ class Alarm:
         if not self.enabled or not self.is_active:
             return False
         
-        next_trigger = self.get_next_trigger_time()
-        if next_trigger is None:
+        # Obtener hora y minuto programados
+        try:
+            alarm_hour, alarm_minute = map(int, self.time.split(':'))
+        except Exception:
             return False
         
-        # Permitir activación en un margen de 1 segundo
-        time_diff = abs((current_time - next_trigger).total_seconds())
-        return time_diff < 1
+        current_hour = current_time.hour
+        current_minute = current_time.minute
+        current_second = current_time.second
+        
+        # Verificar si coincide la hora y minuto (solo en los primeros 3 segundos)
+        if current_hour == alarm_hour and current_minute == alarm_minute and current_second < 3:
+            # Verificar si la alarma ya fue disparada hoy
+            if self.last_triggered:
+                try:
+                    last_trigger = datetime.fromisoformat(self.last_triggered)
+                    # Si ya se disparó hoy, no disparar de nuevo
+                    if last_trigger.date() == current_time.date():
+                        return False
+                except Exception:
+                    pass
+            
+            # Verificar recurrencia
+            if self.recurrence == "none":
+                # Alarma única - solo dispara si es hoy o futuro
+                return True
+            elif self.recurrence == "daily":
+                # Alarma diaria - siempre dispara
+                return True
+            elif self.recurrence == "weekly":
+                # Alarma semanal - solo en días específicos
+                current_weekday = current_time.weekday()
+                return current_weekday in [int(d) for d in self.days_of_week]
+            
+            return True
+        
+        return False
     
     def trigger(self) -> Dict[str, Any]:
         """
@@ -300,9 +331,11 @@ class AlarmManager:
     
     def start(self):
         """
-        Inicia el sistema de alarmas
+        Inicia el sistema de alarmas con verificación continua
+        El sistema verifica cada segundo si alguna alarma debe dispararse
         """
         if self.is_running:
+            logger.warning("Sistema de alarmas ya está en ejecución")
             return
         
         self.is_running = True
@@ -310,7 +343,8 @@ class AlarmManager:
         self.check_thread = threading.Thread(target=self._alarm_check_loop, daemon=True)
         self.check_thread.start()
         
-        logger.info("Sistema de alarmas iniciado")
+        logger.info("✅ Sistema de alarmas iniciado - Verificación continua activa")
+        logger.info(f"📊 Alarmas cargadas: {len(self.alarms)} total, {len(self.get_active_alarms())} activas")
     
     def stop(self):
         """
@@ -324,36 +358,53 @@ class AlarmManager:
     
     def _alarm_check_loop(self):
         """
-        Bucle principal para verificar alarmas
+        Bucle principal para verificar alarmas continuamente
+        Verifica cada segundo si alguna alarma debe dispararse
         """
+        logger.info("🔄 Bucle de verificación de alarmas iniciado")
+        
         while self.is_running:
             try:
+                # Esperar 1 segundo antes de la próxima verificación
                 if self.check_event.wait(self.check_interval):
                     break
                 
+                # Verificar alarmas pendientes
                 self._check_pending_alarms()
                 
             except Exception as e:
-                logger.error(f"Error en bucle de verificación de alarmas: {e}")
+                logger.error(f"❌ Error en bucle de verificación de alarmas: {e}")
+                logger.exception("Stack trace completo:")
+        
+        logger.info("🛑 Bucle de verificación de alarmas detenido")
     
     def _check_pending_alarms(self):
         """
         Verifica y activa alarmas pendientes
+        Compara la hora actual del sistema con las alarmas programadas
         """
         current_time = datetime.now()
         triggered_alarms = []
         
+        # Verificar cada alarma
         for alarm in self.alarms:
             if alarm.should_trigger(current_time):
                 triggered_alarms.append(alarm)
+                logger.info(f"⏰ Alarma detectada para activar: {alarm.title} - {alarm.time}")
         
         # Procesar alarmas activadas
         for alarm in triggered_alarms:
+            logger.info(f"🔔 Activando alarma: {alarm.title}")
             self._trigger_alarm(alarm)
     
     def _trigger_alarm(self, alarm: Alarm):
         """
-        Activa una alarma específica
+        Activa una alarma específica y ejecuta la secuencia completa:
+        1. Sonido de alarma
+        2. Notificación
+        3. Vibración (si está habilitado)
+        4. Abrir navegador Brave
+        5. Reproducir video motivacional aleatorio
         
         Args:
             alarm: Alarma a activar
@@ -362,33 +413,85 @@ class AlarmManager:
             # Activar la alarma
             trigger_info = alarm.trigger()
             
-            # Enviar notificación
-            if self.config_manager.get('notifications', 'enabled', True):
-                self._send_notification(trigger_info)
+            logger.info(f"🔔 Iniciando secuencia de alarma: {alarm.title} ({alarm.id})")
             
-            # Reproducir sonido
+            # 1. Reproducir sonido de alarma
             if self.config_manager.get('audio', 'alarm_sound'):
+                logger.info("🔊 Reproduciendo sonido de alarma...")
                 if self.audio_callback:
                     self.audio_callback(trigger_info)
             
-            # Vibrar si está habilitado
+            # 2. Enviar notificación del sistema
+            if self.config_manager.get('notifications', 'enabled', True):
+                logger.info("📬 Enviando notificación...")
+                self._send_notification(trigger_info)
+            
+            # 3. Vibrar si está habilitado
             if alarm.vibrate and self.config_manager.get('notifications', 'vibrate', True):
+                logger.info("📳 Activando vibración...")
                 self._vibrate()
             
-            # Actualizar próxima activación
-            alarm.next_trigger = alarm.get_next_trigger_time().isoformat()
+            # 4. Abrir navegador Brave con video motivacional
+            logger.info("🌐 Abriendo navegador Brave con video motivacional...")
+            self._open_motivational_video(alarm)
+            
+            # 5. Calcular y actualizar próxima activación
+            next_trigger = alarm.get_next_trigger_time()
+            if next_trigger:
+                alarm.next_trigger = next_trigger.isoformat()
+                logger.info(f"⏰ Próxima activación programada: {next_trigger.strftime('%Y-%m-%d %H:%M:%S')}")
+            else:
+                # Si es alarma única, desactivarla
+                if alarm.recurrence == "none":
+                    alarm.enabled = False
+                    logger.info(f"✅ Alarma única completada, desactivada")
             
             # Guardar cambios
             self.save_alarms()
             
-            logger.info(f"Alarma activada: {alarm.title} ({alarm.id})")
+            logger.info(f"✅ Secuencia de alarma completada exitosamente: {alarm.title}")
             
             # Notificar callback si existe
             if self.notification_callback:
                 self.notification_callback(trigger_info)
                 
         except Exception as e:
-            logger.error(f"Error activando alarma {alarm.id}: {e}")
+            logger.error(f"❌ Error activando alarma {alarm.id}: {e}")
+            logger.exception("Stack trace completo:")
+    
+    def _open_motivational_video(self, alarm: Alarm):
+        """
+        Abre un video motivacional en el navegador Brave
+        
+        Args:
+            alarm: Alarma que dispara el video
+        """
+        try:
+            from browser_integration import BrowserIntegration
+            
+            # Crear instancia de browser_integration
+            browser = BrowserIntegration(self.config_manager)
+            
+            # Determinar navegador a usar
+            preferred_browser = alarm.browser_preference or "brave"
+            
+            # Si la alarma tiene video_url específico, usarlo
+            if alarm.video_url and alarm.video_url.strip():
+                logger.info(f"🎥 Abriendo video específico: {alarm.video_url}")
+                success = browser.open_url(alarm.video_url, preferred_browser, fullscreen=False)
+            else:
+                # Usar video motivacional aleatorio
+                logger.info(f"🎲 Seleccionando video motivacional aleatorio...")
+                success = browser.open_motivational_video(preferred_browser)
+            
+            if success:
+                logger.info(f"✅ Video motivacional abierto correctamente en {preferred_browser}")
+            else:
+                logger.warning(f"⚠️ No se pudo abrir el video motivacional")
+                
+        except Exception as e:
+            logger.error(f"❌ Error abriendo video motivacional: {e}")
+            logger.exception("Stack trace completo:")
     
     def _send_notification(self, trigger_info: Dict[str, Any]):
         """
@@ -703,6 +806,40 @@ class AlarmManager:
             callback: Función a llamar para reproducir audio
         """
         self.audio_callback = callback
+    
+    def clear_all_alarms(self) -> bool:
+        """
+        Elimina todas las alarmas
+        
+        Returns:
+            True si se eliminaron correctamente
+        """
+        try:
+            self.alarms.clear()
+            self.save_alarms()
+            logger.info("Todas las alarmas han sido eliminadas")
+            return True
+        except Exception as e:
+            logger.error(f"Error eliminando todas las alarmas: {e}")
+            return False
+    
+    def get_alarms_count(self) -> int:
+        """
+        Obtiene el número total de alarmas
+        
+        Returns:
+            Número de alarmas
+        """
+        return len(self.alarms)
+    
+    def get_enabled_alarms_count(self) -> int:
+        """
+        Obtiene el número de alarmas activas
+        
+        Returns:
+            Número de alarmas activas
+        """
+        return len([a for a in self.alarms if a.enabled])
     
     def export_alarms(self, file_path: str) -> bool:
         """

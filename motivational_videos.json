@@ -1,0 +1,61 @@
+{
+  "default_videos": [
+    {
+      "title": "Motivación Matutina - Empieza Tu Día con Energía",
+      "url": "https://www.youtube.com/watch?v=ZXsQAXx_ao0",
+      "duration": "10:00"
+    },
+    {
+      "title": "Nunca Te Rindas - Video Motivacional",
+      "url": "https://www.youtube.com/watch?v=mgmVOuLgFB0",
+      "duration": "5:00"
+    },
+    {
+      "title": "Despierta tu Grandeza - Motivación Diaria",
+      "url": "https://www.youtube.com/watch?v=lsSC2vx7zFQ",
+      "duration": "8:00"
+    },
+    {
+      "title": "El Poder de Levantarse Temprano",
+      "url": "https://www.youtube.com/watch?v=ji5_MqicxSo",
+      "duration": "15:00"
+    },
+    {
+      "title": "Tu Momento Es Ahora - Motivación Poderosa",
+      "url": "https://www.youtube.com/watch?v=tYzMYcUty6s",
+      "duration": "12:00"
+    },
+    {
+      "title": "Despierta Camcampeón - Rutina Matutina",
+      "url": "https://www.youtube.com/watch?v=hbkZrOU1Zag",
+      "duration": "7:00"
+    },
+    {
+      "title": "No Tienes Tiempo para el Miedo",
+      "url": "https://www.youtube.com/watch?v=LqNPcNYXDFU",
+      "duration": "6:00"
+    },
+    {
+      "title": "Empieza Hoy Tu Transformación",
+      "url": "https://www.youtube.com/watch?v=Vg0GJcqVNSQ",
+      "duration": "10:00"
+    },
+    {
+      "title": "Disciplina y Consistencia - Claves del Éxito",
+      "url": "https://www.youtube.com/watch?v=eVZQl9m1dZk",
+      "duration": "8:30"
+    },
+    {
+      "title": "Despierta con Propósito - Motivación Matinal",
+      "url": "https://www.youtube.com/watch?v=fIFA8v5ybTM",
+      "duration": "11:00"
+    }
+  ],
+  "custom_videos": [],
+  "settings": {
+    "random_selection": true,
+    "autoplay": true,
+    "fullscreen": false,
+    "repeat_if_snoozed": true
+  }
+}

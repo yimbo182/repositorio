@@ -1,0 +1,20 @@
+[
+  {
+    "id": "9162400b-8703-4f0a-8f62-30f76ea4e132",
+    "title": "Mi Alarmasd",
+    "description": "",
+    "time": "21:12",
+    "recurrence": "daily",
+    "recurrence_data": {},
+    "enabled": true,
+    "video_url": "https://www.youtube.com/watch?v=3spCFnMSGIY",
+    "browser_preference": "brave",
+    "sound_file": "",
+    "volume": 80,
+    "vibrate": true,
+    "snooze_interval": 5,
+    "max_snoozes": 3,
+    "snooze_count": 0,
+    "created_at": "2025-11-06T21:13:03.944029",
+    "last_triggered": null,
+    "next_trigger": 

@@ -1,6 +1,7 @@
 """
 Módulo de integración con navegadores y deep linking
 Gestiona la apertura automática de navegadores y videos de YouTube
+Sistema de videos motivacionales aleatorios
 """
 
 import os
@@ -8,7 +9,8 @@ import logging
 import webbrowser
 import subprocess
 import platform
-from typing import Optional, Dict, Any
+import random
+from typing import Optional, Dict, Any, List
 from urllib.parse import urlparse, parse_qs
 import json
 
@@ -220,6 +222,221 @@ class BrowserIntegration:
         except Exception as e:
             logger.error(f"Error extrayendo video ID de {youtube_url}: {e}")
             return None
+    
+    def load_motivational_videos(self) -> Dict[str, Any]:
+        """
+        Carga la configuración de videos motivacionales
+        
+        Returns:
+            Diccionario con videos y configuración
+        """
+        try:
+            videos_file = os.path.join(os.getcwd(), "motivational_videos.json")
+            
+            if os.path.exists(videos_file):
+                with open(videos_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            else:
+                # Configuración por defecto si no existe el archivo
+                return {
+                    "default_videos": [],
+                    "custom_videos": [],
+                    "settings": {
+                        "random_selection": True,
+                        "autoplay": True,
+                        "fullscreen": False
+                    }
+                }
+        except Exception as e:
+            logger.error(f"Error cargando videos motivacionales: {e}")
+            return {"default_videos": [], "custom_videos": [], "settings": {}}
+    
+    def save_motivational_videos(self, videos_data: Dict[str, Any]) -> bool:
+        """
+        Guarda la configuración de videos motivacionales
+        
+        Args:
+            videos_data: Datos de videos a guardar
+            
+        Returns:
+            True si se guardó correctamente
+        """
+        try:
+            videos_file = os.path.join(os.getcwd(), "motivational_videos.json")
+            
+            with open(videos_file, 'w', encoding='utf-8') as f:
+                json.dump(videos_data, f, indent=2, ensure_ascii=False)
+            
+            logger.info("Videos motivacionales guardados correctamente")
+            return True
+        except Exception as e:
+            logger.error(f"Error guardando videos motivacionales: {e}")
+            return False
+    
+    def get_random_motivational_video(self) -> Optional[str]:
+        """
+        Obtiene un video motivacional aleatorio
+        
+        Returns:
+            URL del video seleccionado o None
+        """
+        try:
+            videos_config = self.load_motivational_videos()
+            
+            # Combinar videos predeterminados y personalizados
+            all_videos = videos_config.get("default_videos", []) + videos_config.get("custom_videos", [])
+            
+            if not all_videos:
+                logger.warning("No hay videos motivacionales configurados")
+                return None
+            
+            # Seleccionar video aleatorio
+            selected_video = random.choice(all_videos)
+            video_url = selected_video.get("url", "")
+            
+            logger.info(f"Video motivacional seleccionado: {selected_video.get('title', 'Sin título')}")
+            return video_url
+            
+        except Exception as e:
+            logger.error(f"Error obteniendo video motivacional aleatorio: {e}")
+            return None
+    
+    def open_motivational_video(self, browser: str = None) -> bool:
+        """
+        Abre un video motivacional aleatorio en el navegador
+        
+        Args:
+            browser: Navegador preferido (por defecto usa configuración)
+            
+        Returns:
+            True si se abrió correctamente
+        """
+        try:
+            video_url = self.get_random_motivational_video()
+            
+            if not video_url:
+                logger.error("No se pudo obtener video motivacional")
+                return False
+            
+            # Agregar parámetros de autoplay
+            videos_config = self.load_motivational_videos()
+            settings = videos_config.get("settings", {})
+            
+            if settings.get("autoplay", True):
+                if "?" in video_url:
+                    video_url += "&autoplay=1"
+                else:
+                    video_url += "?autoplay=1"
+            
+            # Abrir en navegador
+            success = self.open_url(video_url, browser, fullscreen=settings.get("fullscreen", False))
+            
+            if success:
+                logger.info(f"Video motivacional abierto correctamente: {video_url}")
+            
+            return success
+            
+        except Exception as e:
+            logger.error(f"Error abriendo video motivacional: {e}")
+            return False
+    
+    def add_custom_video(self, title: str, url: str, duration: str = "0:00") -> bool:
+        """
+        Agrega un video personalizado a la lista
+        
+        Args:
+            title: Título del video
+            url: URL del video
+            duration: Duración del video (formato MM:SS)
+            
+        Returns:
+            True si se agregó correctamente
+        """
+        try:
+            if not self._is_valid_url(url):
+                logger.error(f"URL inválida: {url}")
+                return False
+            
+            videos_config = self.load_motivational_videos()
+            
+            # Crear entrada de video
+            new_video = {
+                "title": title,
+                "url": url,
+                "duration": duration
+            }
+            
+            # Agregar a videos personalizados
+            if "custom_videos" not in videos_config:
+                videos_config["custom_videos"] = []
+            
+            videos_config["custom_videos"].append(new_video)
+            
+            # Guardar
+            return self.save_motivational_videos(videos_config)
+            
+        except Exception as e:
+            logger.error(f"Error agregando video personalizado: {e}")
+            return False
+    
+    def remove_custom_video(self, video_url: str) -> bool:
+        """
+        Elimina un video personalizado
+        
+        Args:
+            video_url: URL del video a eliminar
+            
+        Returns:
+            True si se eliminó correctamente
+        """
+        try:
+            videos_config = self.load_motivational_videos()
+            
+            if "custom_videos" not in videos_config:
+                return False
+            
+            # Filtrar videos
+            original_count = len(videos_config["custom_videos"])
+            videos_config["custom_videos"] = [
+                v for v in videos_config["custom_videos"] if v.get("url") != video_url
+            ]
+            
+            if len(videos_config["custom_videos"]) < original_count:
+                return self.save_motivational_videos(videos_config)
+            
+            return False
+            
+        except Exception as e:
+            logger.error(f"Error eliminando video personalizado: {e}")
+            return False
+    
+    def get_all_videos(self) -> List[Dict[str, str]]:
+        """
+        Obtiene todos los videos disponibles
+        
+        Returns:
+            Lista de diccionarios con información de videos
+        """
+        try:
+            videos_config = self.load_motivational_videos()
+            
+            all_videos = []
+            
+            # Agregar videos predeterminados
+            for video in videos_config.get("default_videos", []):
+                video["type"] = "default"
+                all_videos.append(video)
+            
+            # Agregar videos personalizados
+            for video in videos_config.get("custom_videos", []):
+                video["type"] = "custom"
+                all_videos.append(video)
+            
+            return all_videos
+            
+        except Exception as e:
+            logger.error(f"Error obteniendo todos los videos: {e}")
+            return []
 
 class AudioManager:
     """

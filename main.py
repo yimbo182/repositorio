@@ -89,10 +89,13 @@ class AlarmApp(MDApp):
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.theme_cls.primary_palette = "Blue"
-        self.theme_cls.accent_palette = "Amber"
+        # Paleta de colores moderna mejorada
+        self.theme_cls.primary_palette = "DeepPurple"
+        self.theme_cls.accent_palette = "Teal"
         self.theme_cls.theme_style = "Light"
-        self.title = "Alarmas Inteligente"
+        self.theme_cls.primary_hue = "500"
+        self.theme_cls.accent_hue = "A400"
+        self.title = "🔔 Alarmas Inteligente"
         
         # Manager de pantallas
         self.screen_manager = ScreenManager()
@@ -135,11 +138,8 @@ class AlarmApp(MDApp):
             theme_style = self.config_manager.get('theme', 'theme_style', 'Light')
             self.theme_cls.theme_style = theme_style
             
-            # Configurar colores personalizados
-            if theme_style == "Dark":
-                self.theme_cls.bg_normal = [0.1, 0.1, 0.1, 1]
-                self.theme_cls.bg_light = [0.15, 0.15, 0.15, 1]
-                self.theme_cls.bg_dark = [0.05, 0.05, 0.05, 1]
+            logger.info(f"Tema cargado: {theme_style}")
+            
         except Exception as e:
             logger.error(f"Error cargando tema: {e}")
     
@@ -251,18 +251,18 @@ class MainScreen(MDScreen):
         """
         layout = MDBoxLayout(orientation='vertical', spacing=15)
         
-        # Toolbar mejorado con gradiente
+        # Toolbar mejorado con diseño moderno
         toolbar = MDTopAppBar(
             title="🔔 Alarmas Inteligente",
-            elevation=8,
+            elevation=10,
             left_action_items=[["menu", lambda x: self._show_menu()]],
             right_action_items=[
-                ["cog", lambda x: self._open_config()],
-                ["plus-circle", lambda x: self._quick_add_alarm()],
-                ["clock-plus", lambda x: self._add_alarm()]
+                ["plus-circle", lambda x: self._quick_add_alarm(x)],
+                ["cog", lambda x: self._open_config()]
             ]
         )
-        toolbar.md_bg_color = (0.2, 0.4, 0.8, 1)  # Azul vibrante
+        # Gradiente moderno púrpura-azulado
+        toolbar.md_bg_color = (0.4, 0.2, 0.8, 1)
         layout.add_widget(toolbar)
         
         # Contenido principal con mejor padding
@@ -272,16 +272,41 @@ class MainScreen(MDScreen):
             padding=[25, 15, 25, 15]
         )
         
-        # Título de bienvenida
-        welcome_label = MDLabel(
-            text="¡Bienvenido! 🎉",
-            font_style="H5",
-            theme_text_color="Primary",
-            halign="center",
-            size_hint_y=None,
-            height=40
+        # Reloj digital - Hora actual del sistema
+        clock_card = MDCard(
+            size_hint=(1, None),
+            height=100,
+            padding=15,
+            radius=[15, 15, 15, 15],
+            elevation=6
         )
-        self.content_layout.add_widget(welcome_label)
+        clock_card.md_bg_color = (0.4, 0.2, 0.8, 1)  # Púrpura
+        
+        clock_layout = MDBoxLayout(orientation='vertical', spacing=5)
+        
+        self.current_time_label = MDLabel(
+            text=datetime.now().strftime("%H:%M:%S"),
+            font_style="H3",
+            halign="center",
+            theme_text_color="Custom",
+            text_color=(1, 1, 1, 1)
+        )
+        clock_layout.add_widget(self.current_time_label)
+        
+        self.current_date_label = MDLabel(
+            text=datetime.now().strftime("%A, %d de %B de %Y"),
+            font_style="Caption",
+            halign="center",
+            theme_text_color="Custom",
+            text_color=(0.9, 0.9, 0.9, 1)
+        )
+        clock_layout.add_widget(self.current_date_label)
+        
+        clock_card.add_widget(clock_layout)
+        self.content_layout.add_widget(clock_card)
+        
+        # Actualizar reloj cada segundo
+        Clock.schedule_interval(self._update_clock, 1)
         
         # Estadísticas rápidas con mejor diseño
         stats_card = self._create_stats_card()
@@ -312,18 +337,32 @@ class MainScreen(MDScreen):
         self.add_widget(layout)
         
         # Programar actualización de estadísticas
-        Clock.schedule_interval(self._update_stats, 60)  # Cada minuto
+        Clock.schedule_interval(self._update_stats, 5)  # Cada 5 segundos
+    
+    def _update_clock(self, dt):
+        """
+        Actualiza el reloj digital con la hora actual
+        """
+        try:
+            now = datetime.now()
+            self.current_time_label.text = now.strftime("%H:%M:%S")
+            self.current_date_label.text = now.strftime("%A, %d de %B de %Y")
+        except Exception as e:
+            logger.error(f"Error actualizando reloj: {e}")
     
     def _create_stats_card(self):
         """
-        Crea la tarjeta de estadísticas
+        Crea la tarjeta de estadísticas con diseño mejorado
         """
         card = MDCard(
             size_hint=(1, None),
-            height=120,
-            padding=15,
-            spacing=10
+            height=130,
+            padding=20,
+            spacing=10,
+            radius=[15, 15, 15, 15],
+            elevation=4
         )
+        card.md_bg_color = (0.95, 0.95, 1.0, 1)
         
         stats_layout = MDGridLayout(
             cols=3,
@@ -378,38 +417,38 @@ class MainScreen(MDScreen):
             height=120
         )
         
-        # Botón principal: Alarma Rápida
+        # Botón principal: Alarma Rápida - Gradiente verde moderno
         quick_button = MDRaisedButton(
             text="🚀 Crear Alarma\nRápida",
             size_hint=(0.5, 1),
             font_size="16sp",
-            elevation=6,
+            elevation=8,
             on_release=self._quick_add_alarm
         )
-        quick_button.md_bg_color = (0.1, 0.7, 0.3, 1)  # Verde vibrante
+        quick_button.md_bg_color = (0.0, 0.75, 0.5, 1)  # Verde azulado moderno
         buttons_grid.add_widget(quick_button)
         
-        # Botón secundario: Alarma Completa
+        # Botón secundario: Gestionar Alarmas - Azul índigo
         full_button = MDRaisedButton(
-            text="⏰ Alarma\nCompleta",
+            text="📋 Gestionar\nAlarmas",
             size_hint=(0.5, 1),
             font_size="16sp",
-            elevation=6,
+            elevation=8,
             on_release=self._add_alarm
         )
-        full_button.md_bg_color = (0.2, 0.4, 0.8, 1)  # Azul vibrante
+        full_button.md_bg_color = (0.3, 0.4, 0.9, 1)  # Azul índigo
         buttons_grid.add_widget(full_button)
         
-        # Botón terciario: Configuración
+        # Botón terciario: Configuración - Púrpura profundo
         config_button = MDRaisedButton(
             text="⚙️ Configuración",
             size_hint=(1, None),
             height=45,
             font_size="16sp",
-            elevation=4,
+            elevation=6,
             on_release=self._open_config
         )
-        config_button.md_bg_color = (0.6, 0.3, 0.8, 1)  # Púrpura
+        config_button.md_bg_color = (0.5, 0.2, 0.8, 1)  # Púrpura profundo
         buttons_grid.add_widget(config_button)
         
         section.add_widget(buttons_grid)
@@ -463,20 +502,56 @@ class MainScreen(MDScreen):
     
     def _show_menu(self):
         """
-        Muestra el menú lateral
+        Muestra el menú lateral mejorado
         """
+        from kivymd.uix.list import OneLineIconListItem
+        
+        menu_items = []
+        
+        class MenuItemWithIcon(OneLineIconListItem):
+            def __init__(self, text, icon, callback, **kwargs):
+                super().__init__(**kwargs)
+                self.text = text
+                self._icon = icon
+                self._callback = callback
+                
+                # Añadir icono
+                icon_widget = IconLeftWidget(icon=icon)
+                self.add_widget(icon_widget)
+            
+            def on_release(self):
+                if self._callback:
+                    self._callback()
+                # Cerrar el diálogo
+                if hasattr(self, 'parent_dialog'):
+                    self.parent_dialog.dismiss()
+        
+        # Crear elementos del menú
+        items_data = [
+            ("🏠 Inicio", "home", self._go_home),
+            ("📋 Gestionar Alarmas", "clipboard-list", self._add_alarm),
+            ("⚙️ Configuración", "cog", self._open_config),
+            ("🗑️ Limpiar Alarmas", "delete-sweep", self._clear_alarms),
+            ("📱 Sobre la App", "information", self._show_about),
+            ("❓ Ayuda", "help-circle", self._show_help),
+            ("🚪 Salir", "exit-to-app", self._show_exit_dialog)
+        ]
+        
+        for text, icon, callback in items_data:
+            item = MenuItemWithIcon(text=text, icon=icon, callback=callback)
+            menu_items.append(item)
+        
         dialog = MDDialog(
             title="🔔 Menú Principal",
             type="simple",
-            items=[
-                ("🏠 Inicio", lambda x: self._go_home()),
-                ("⚙️ Configuración", lambda x: self._open_config()),
-                ("🗑️ Limpiar Alarmas", lambda x: self._clear_alarms()),
-                ("📱 Sobre la App", lambda x: self._show_about()),
-                ("❓ Ayuda", lambda x: self._show_help()),
-                ("🚪 Salir", lambda x: self._exit_app())
-            ]
+            items=menu_items,
+            md_bg_color=(0.98, 0.98, 1.0, 1)
         )
+        
+        # Guardar referencia al diálogo en cada item
+        for item in menu_items:
+            item.parent_dialog = dialog
+        
         dialog.open()
     
     def _go_home(self):
@@ -523,20 +598,36 @@ class MainScreen(MDScreen):
         )
         dialog.open()
     
+    def _show_exit_dialog(self):
+        """
+        Muestra diálogo de confirmación para salir
+        """
+        dialog = MDDialog(
+            title="🚪 Salir de la Aplicación",
+            text="¿Estás seguro de que quieres salir de Alarmas Inteligente?\n\nTodas las alarmas activas se mantendrán.",
+            buttons=[
+                MDRaisedButton(
+                    text="❌ Cancelar",
+                    md_bg_color=(0.6, 0.6, 0.6, 1),
+                    on_release=lambda x: dialog.dismiss()
+                ),
+                MDRaisedButton(
+                    text="🚪 Salir",
+                    md_bg_color=(0.8, 0.2, 0.2, 1),
+                    on_release=lambda x: self._exit_app()
+                )
+            ]
+        )
+        dialog.open()
+    
     def _exit_app(self):
         """
         Sale de la aplicación
         """
-        dialog = MDDialog(
-            title="🚪 Salir",
-            text="¿Estás seguro de que quieres salir de Alarmas Inteligente?",
-            buttons=[
-                MDRaisedButton(text="Cancelar", elevation=0),
-                MDRaisedButton(text="Salir", elevation=0)
-            ]
-        )
-        # Implementar lógica de salida
-        dialog.open()
+        import sys
+        app = App.get_running_app()
+        app.stop()
+        sys.exit(0)
     
     def _show_success(self, message):
         """
@@ -567,20 +658,25 @@ class MainScreen(MDScreen):
         app = App.get_running_app()
         app.screen_manager.current = 'alarms'
     
-    def _quick_add_alarm(self, instance):
+    def _quick_add_alarm(self, instance=None):
         """
-        Agrega una alarma rápida
+        Agrega una alarma con hora específica
         """
-        dialog = MDDialog(
-            title="🚀 Alarma Rápida",
-            type="custom",
-            content_cls=QuickAlarmDialog(),
-            auto_dismiss=False
-        )
-        # Guardar referencia del diálogo
-        content = dialog.content_cls
-        content.dialog = dialog
-        dialog.open()
+        try:
+            dialog = MDDialog(
+                title="⏰ Nueva Alarma",
+                type="custom",
+                content_cls=AlarmTimePickerDialog(),
+                auto_dismiss=False
+            )
+            # Guardar referencia del diálogo
+            content = dialog.content_cls
+            content.dialog = dialog
+            dialog.open()
+        except Exception as e:
+            logger.error(f"Error abriendo diálogo de alarma: {e}")
+            logger.exception("Stack trace completo:")
+            self._show_error(f"Error abriendo diálogo: {str(e)}")
     
     def _update_stats(self, dt):
         """
@@ -679,14 +775,16 @@ class QuickAlarmDialog(BoxLayout):
         cancel_button = MDRaisedButton(
             text="❌ Cancelar",
             size_hint_x=0.5,
-            md_bg_color=(0.8, 0.2, 0.2, 1)  # Rojo para cancelar
+            md_bg_color=(0.7, 0.3, 0.3, 1),
+            elevation=4
         )
         cancel_button.bind(on_release=self._cancel_alarm)
         
         save_button = MDRaisedButton(
             text="✅ Guardar Alarma",
             size_hint_x=0.5,
-            md_bg_color=(0.2, 0.8, 0.2, 1)  # Verde para guardar
+            md_bg_color=(0.0, 0.75, 0.5, 1),
+            elevation=6
         )
         save_button.bind(on_release=self._save_alarm)
         
@@ -1035,26 +1133,225 @@ class AlarmScreen(MDScreen):
     
     def _build_ui(self):
         """
-        Construye la interfaz de gestión de alarmas
+        Construye la interfaz de gestión de alarmas mejorada
         """
-        layout = MDBoxLayout(orientation='vertical')
+        layout = MDBoxLayout(orientation='vertical', spacing=0)
         
-        # Toolbar
+        # Toolbar con diseño moderno
         toolbar = MDTopAppBar(
-            title="Gestionar Alarmas",
+            title="📋 Gestionar Alarmas",
             left_action_items=[["arrow-left", lambda x: self._go_back()]],
-            elevation=2
+            right_action_items=[
+                ["plus", lambda x: self._add_new_alarm()],
+                ["refresh", lambda x: self._refresh_alarms()]
+            ],
+            elevation=10
         )
+        toolbar.md_bg_color = (0.4, 0.2, 0.8, 1)
         layout.add_widget(toolbar)
         
-        # Lista de alarmas
+        # Contenedor con padding
+        content = MDBoxLayout(orientation='vertical', padding=15, spacing=15)
+        
+        # Mensaje de bienvenida
+        welcome_card = MDCard(
+            size_hint=(1, None),
+            height=80,
+            padding=15,
+            radius=[12, 12, 12, 12],
+            elevation=3
+        )
+        welcome_card.md_bg_color = (0.95, 0.95, 1.0, 1)
+        
+        welcome_layout = MDBoxLayout(orientation='vertical', spacing=5)
+        welcome_layout.add_widget(MDLabel(
+            text="🎯 Tus Alarmas Programadas",
+            font_style="H6",
+            theme_text_color="Primary",
+            halign="center"
+        ))
+        welcome_layout.add_widget(MDLabel(
+            text="Toca una alarma para editarla o desliza para eliminar",
+            font_style="Caption",
+            halign="center"
+        ))
+        welcome_card.add_widget(welcome_layout)
+        content.add_widget(welcome_card)
+        
+        # Lista de alarmas con scroll
         scroll = ScrollView()
         self.alarm_list = MDList()
         scroll.add_widget(self.alarm_list)
         
-        layout.add_widget(scroll)
+        content.add_widget(scroll)
+        layout.add_widget(content)
         
         self.add_widget(layout)
+        
+        # Cargar alarmas al iniciar
+        Clock.schedule_once(lambda dt: self._refresh_alarms(), 0.5)
+    
+    def _add_new_alarm(self, *args):
+        """
+        Muestra diálogo para agregar nueva alarma
+        """
+        from kivymd.uix.snackbar import Snackbar
+        snackbar = Snackbar(
+            text="💡 Usa el botón '🚀 Crear Alarma Rápida' desde la pantalla principal",
+            bg_color=(0.3, 0.4, 0.9, 0.9)
+        )
+        snackbar.open()
+    
+    def _refresh_alarms(self, *args):
+        """
+        Actualiza la lista de alarmas
+        """
+        try:
+            app = App.get_running_app()
+            alarms = app.alarm_manager.get_active_alarms()
+            
+            # Limpiar lista actual
+            self.alarm_list.clear_widgets()
+            
+            if not alarms:
+                # Mostrar mensaje si no hay alarmas
+                no_alarms_card = MDCard(
+                    size_hint=(1, None),
+                    height=150,
+                    padding=20,
+                    radius=[12, 12, 12, 12],
+                    elevation=2
+                )
+                no_alarms_card.md_bg_color = (0.98, 0.98, 1.0, 1)
+                
+                no_alarms_layout = MDBoxLayout(orientation='vertical', spacing=10)
+                no_alarms_layout.add_widget(MDLabel(
+                    text="📭",
+                    font_style="H3",
+                    halign="center"
+                ))
+                no_alarms_layout.add_widget(MDLabel(
+                    text="No tienes alarmas activas",
+                    font_style="H6",
+                    halign="center",
+                    theme_text_color="Primary"
+                ))
+                no_alarms_layout.add_widget(MDLabel(
+                    text="¡Crea tu primera alarma!",
+                    font_style="Caption",
+                    halign="center"
+                ))
+                no_alarms_card.add_widget(no_alarms_layout)
+                self.alarm_list.add_widget(no_alarms_card)
+            else:
+                # Mostrar alarmas
+                for alarm in alarms:
+                    alarm_item = self._create_alarm_item(alarm)
+                    self.alarm_list.add_widget(alarm_item)
+            
+            logger.info(f"Lista de alarmas actualizada: {len(alarms)} alarmas")
+            
+        except Exception as e:
+            logger.error(f"Error actualizando lista de alarmas: {e}")
+    
+    def _create_alarm_item(self, alarm):
+        """
+        Crea un elemento de lista para una alarma
+        """
+        # Formatear información de la alarma
+        time_str = alarm.get_formatted_time()
+        title = alarm.title or "Sin título"
+        
+        # Determinar icono según recurrencia
+        if alarm.recurrence == "daily":
+            recurrence_icon = "🔁"
+            recurrence_text = "Diaria"
+        elif alarm.recurrence == "weekly":
+            recurrence_icon = "📅"
+            recurrence_text = "Semanal"
+        else:
+            recurrence_icon = "⏰"
+            recurrence_text = "Una vez"
+        
+        # Crear item de lista
+        item = ThreeLineAvatarIconListItem(
+            text=f"⏰ {title}",
+            secondary_text=f"🕐 Hora: {time_str}",
+            tertiary_text=f"{recurrence_icon} {recurrence_text} | Volumen: {alarm.volume}%"
+        )
+        
+        # Icono izquierdo
+        icon_widget = IconLeftWidget(
+            icon="alarm" if alarm.enabled else "alarm-off"
+        )
+        item.add_widget(icon_widget)
+        
+        # Botón de editar/eliminar
+        from kivymd.uix.button import MDIconButton
+        
+        delete_btn = MDIconButton(
+            icon="delete",
+            theme_text_color="Custom",
+            text_color=(0.8, 0.2, 0.2, 1),
+            on_release=lambda x: self._confirm_delete_alarm(alarm)
+        )
+        item.add_widget(delete_btn)
+        
+        # Acción al tocar el item
+        item.bind(on_release=lambda x: self._edit_alarm(alarm))
+        
+        return item
+    
+    def _edit_alarm(self, alarm):
+        """
+        Edita una alarma
+        """
+        from kivymd.uix.snackbar import Snackbar
+        snackbar = Snackbar(
+            text=f"📝 Editando: {alarm.title}",
+            bg_color=(0.3, 0.4, 0.9, 0.9)
+        )
+        snackbar.open()
+    
+    def _confirm_delete_alarm(self, alarm):
+        """
+        Confirma la eliminación de una alarma
+        """
+        dialog = MDDialog(
+            title="🗑️ Eliminar Alarma",
+            text=f"¿Estás seguro de que quieres eliminar la alarma '{alarm.title}'?",
+            buttons=[
+                MDRaisedButton(
+                    text="Cancelar",
+                    md_bg_color=(0.6, 0.6, 0.6, 1),
+                    on_release=lambda x: dialog.dismiss()
+                ),
+                MDRaisedButton(
+                    text="Eliminar",
+                    md_bg_color=(0.8, 0.2, 0.2, 1),
+                    on_release=lambda x: self._delete_alarm(alarm, dialog)
+                )
+            ]
+        )
+        dialog.open()
+    
+    def _delete_alarm(self, alarm, dialog):
+        """
+        Elimina una alarma
+        """
+        try:
+            app = App.get_running_app()
+            if app.alarm_manager.delete_alarm(alarm.id):
+                from kivymd.uix.snackbar import Snackbar
+                snackbar = Snackbar(
+                    text=f"✅ Alarma '{alarm.title}' eliminada",
+                    bg_color=(0.0, 0.6, 0.0, 0.9)
+                )
+                snackbar.open()
+                self._refresh_alarms()
+            dialog.dismiss()
+        except Exception as e:
+            logger.error(f"Error eliminando alarma: {e}")
     
     def _go_back(self):
         """
@@ -1062,6 +1359,354 @@ class AlarmScreen(MDScreen):
         """
         app = App.get_running_app()
         app.screen_manager.current = 'main'
+class AlarmTimePickerDialog(BoxLayout):
+    """
+    Diálogo para configurar alarma con hora específica del día
+    """
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.orientation = 'vertical'
+        self.spacing = 15
+        self.size_hint_y = None
+        self.height = 520
+        self.dialog = None
+        self.selected_hour = datetime.now().hour
+        self.selected_minute = datetime.now().minute
+        self.recurrence_type = "daily"
+        self._build_ui()
+    
+    def _build_ui(self):
+        """
+        Construye la interfaz del diálogo con time picker
+        """
+        # Campo de título
+        self.title_field = MDTextField(
+            hint_text="Título de la alarma (ej: Despertar, Gym, Reunión)",
+            size_hint_y=None,
+            height=50,
+            text="Mi Alarma"
+        )
+        self.add_widget(self.title_field)
+        
+        # Selector de hora
+        time_selector_card = MDCard(
+            size_hint=(1, None),
+            height=200,
+            padding=15,
+            radius=[12, 12, 12, 12],
+            elevation=2
+        )
+        time_selector_card.md_bg_color = (0.95, 0.95, 1.0, 1)
+        
+        time_selector_layout = MDBoxLayout(orientation='vertical', spacing=10)
+        
+        time_selector_layout.add_widget(MDLabel(
+            text="⏰ Hora de la Alarma",
+            font_style="H6",
+            theme_text_color="Primary",
+            halign="center"
+        ))
+        
+        # Selectores de hora y minuto
+        pickers_layout = MDBoxLayout(orientation='horizontal', spacing=20, size_hint_y=None, height=90)
+        
+        # Hora
+        hour_layout = MDBoxLayout(orientation='vertical', spacing=5)
+        hour_layout.add_widget(MDLabel(text="Hora", font_style="Caption", halign="center"))
+        
+        hour_picker_layout = BoxLayout(orientation='horizontal', spacing=5, size_hint_y=None, height=60)
+        
+        dec_hour_btn = MDIconButton(
+            icon="minus-circle",
+            on_release=self._decrease_hour
+        )
+        hour_picker_layout.add_widget(dec_hour_btn)
+        
+        self.hour_label = MDLabel(
+            text=f"{self.selected_hour:02d}",
+            font_style="H3",
+            halign="center",
+            theme_text_color="Primary"
+        )
+        hour_picker_layout.add_widget(self.hour_label)
+        
+        inc_hour_btn = MDIconButton(
+            icon="plus-circle",
+            on_release=self._increase_hour
+        )
+        hour_picker_layout.add_widget(inc_hour_btn)
+        
+        hour_layout.add_widget(hour_picker_layout)
+        pickers_layout.add_widget(hour_layout)
+        
+        # Separador
+        pickers_layout.add_widget(MDLabel(
+            text=":",
+            font_style="H2",
+            halign="center",
+            size_hint_x=0.2
+        ))
+        
+        # Minuto
+        minute_layout = MDBoxLayout(orientation='vertical', spacing=5)
+        minute_layout.add_widget(MDLabel(text="Minuto", font_style="Caption", halign="center"))
+        
+        minute_picker_layout = BoxLayout(orientation='horizontal', spacing=5, size_hint_y=None, height=60)
+        
+        dec_minute_btn = MDIconButton(
+            icon="minus-circle",
+            on_release=self._decrease_minute
+        )
+        minute_picker_layout.add_widget(dec_minute_btn)
+        
+        self.minute_label = MDLabel(
+            text=f"{self.selected_minute:02d}",
+            font_style="H3",
+            halign="center",
+            theme_text_color="Primary"
+        )
+        minute_picker_layout.add_widget(self.minute_label)
+        
+        inc_minute_btn = MDIconButton(
+            icon="plus-circle",
+            on_release=self._increase_minute
+        )
+        minute_picker_layout.add_widget(inc_minute_btn)
+        
+        minute_layout.add_widget(minute_picker_layout)
+        pickers_layout.add_widget(minute_layout)
+        
+        time_selector_layout.add_widget(pickers_layout)
+        
+        # Mostrar tiempo hasta alarma
+        self.time_until_label = MDLabel(
+            text=self._calculate_time_until(),
+            font_style="Caption",
+            halign="center",
+            theme_text_color="Secondary"
+        )
+        time_selector_layout.add_widget(self.time_until_label)
+        
+        time_selector_card.add_widget(time_selector_layout)
+        self.add_widget(time_selector_card)
+        
+        # Selector de recurrencia
+        recurrence_layout = MDBoxLayout(orientation='vertical', spacing=5, size_hint_y=None, height=80)
+        recurrence_layout.add_widget(MDLabel(text="🔁 Repetición", font_style="Caption"))
+        
+        recurrence_buttons = BoxLayout(orientation='horizontal', spacing=5, size_hint_y=None, height=40)
+        
+        once_btn = MDRaisedButton(
+            text="Una vez",
+            size_hint_x=0.33,
+            on_release=lambda x: self._set_recurrence("none", once_btn)
+        )
+        recurrence_buttons.add_widget(once_btn)
+        
+        daily_btn = MDRaisedButton(
+            text="Diaria",
+            size_hint_x=0.33,
+            on_release=lambda x: self._set_recurrence("daily", daily_btn)
+        )
+        daily_btn.md_bg_color = (0.0, 0.75, 0.5, 1)
+        recurrence_buttons.add_widget(daily_btn)
+        
+        weekly_btn = MDRaisedButton(
+            text="Semanal",
+            size_hint_x=0.33,
+            on_release=lambda x: self._set_recurrence("weekly", weekly_btn)
+        )
+        recurrence_buttons.add_widget(weekly_btn)
+        
+        self.recurrence_buttons = [once_btn, daily_btn, weekly_btn]
+        recurrence_layout.add_widget(recurrence_buttons)
+        self.add_widget(recurrence_layout)
+        
+        # Campo de URL del video motivacional
+        self.video_field = MDTextField(
+            hint_text="URL del video (opcional - se usa aleatorio si está vacío)",
+            size_hint_y=None,
+            height=50
+        )
+        self.add_widget(self.video_field)
+        
+        # Botones de acción
+        button_layout = BoxLayout(
+            orientation='horizontal',
+            spacing=10,
+            size_hint_y=None,
+            height=50
+        )
+        
+        cancel_button = MDRaisedButton(
+            text="❌ Cancelar",
+            size_hint_x=0.5,
+            md_bg_color=(0.7, 0.3, 0.3, 1),
+            elevation=4
+        )
+        cancel_button.bind(on_release=self._cancel_alarm)
+        
+        save_button = MDRaisedButton(
+            text="✅ Guardar Alarma",
+            size_hint_x=0.5,
+            md_bg_color=(0.0, 0.75, 0.5, 1),
+            elevation=6
+        )
+        save_button.bind(on_release=self._save_alarm)
+        
+        button_layout.add_widget(cancel_button)
+        button_layout.add_widget(save_button)
+        self.add_widget(button_layout)
+    
+    def _increase_hour(self, instance):
+        """Incrementa la hora"""
+        self.selected_hour = (self.selected_hour + 1) % 24
+        self.hour_label.text = f"{self.selected_hour:02d}"
+        self.time_until_label.text = self._calculate_time_until()
+    
+    def _decrease_hour(self, instance):
+        """Decrementa la hora"""
+        self.selected_hour = (self.selected_hour - 1) % 24
+        self.hour_label.text = f"{self.selected_hour:02d}"
+        self.time_until_label.text = self._calculate_time_until()
+    
+    def _increase_minute(self, instance):
+        """Incrementa el minuto"""
+        self.selected_minute = (self.selected_minute + 1) % 60
+        self.minute_label.text = f"{self.selected_minute:02d}"
+        self.time_until_label.text = self._calculate_time_until()
+    
+    def _decrease_minute(self, instance):
+        """Decrementa el minuto"""
+        self.selected_minute = (self.selected_minute - 1) % 60
+        self.minute_label.text = f"{self.selected_minute:02d}"
+        self.time_until_label.text = self._calculate_time_until()
+    
+    def _set_recurrence(self, recurrence_type, button):
+        """Establece el tipo de recurrencia"""
+        self.recurrence_type = recurrence_type
+        
+        # Resetear colores de todos los botones
+        for btn in self.recurrence_buttons:
+            btn.md_bg_color = (0.6, 0.6, 0.6, 1)
+        
+        # Resaltar botón seleccionado
+        button.md_bg_color = (0.0, 0.75, 0.5, 1)
+    
+    def _calculate_time_until(self):
+        """Calcula el tiempo hasta que suene la alarma"""
+        try:
+            now = datetime.now()
+            alarm_time = now.replace(hour=self.selected_hour, minute=self.selected_minute, second=0, microsecond=0)
+            
+            # Si la hora ya pasó hoy, calcular para mañana
+            if alarm_time <= now:
+                alarm_time += timedelta(days=1)
+            
+            time_diff = alarm_time - now
+            hours = int(time_diff.total_seconds() // 3600)
+            minutes = int((time_diff.total_seconds() % 3600) // 60)
+            
+            if hours > 0:
+                return f"⏰ Sonará en {hours}h {minutes}m"
+            else:
+                return f"⏰ Sonará en {minutes} minutos"
+        except Exception as e:
+            logger.error(f"Error calculando tiempo: {e}")
+            return "⏰ Calculando..."
+    
+    def _save_alarm(self, instance):
+        """
+        Guarda la alarma con hora específica
+        """
+        try:
+            title = self.title_field.text.strip()
+            video_url = self.video_field.text.strip()
+            
+            # Validaciones
+            if not title:
+                self._show_error("❌ El título de la alarma es requerido")
+                return
+            
+            # Obtener la aplicación actual
+            app = App.get_running_app()
+            
+            # Formatear hora
+            time_str = f"{self.selected_hour:02d}:{self.selected_minute:02d}"
+            
+            # Crear datos de alarma
+            alarm_data = {
+                'title': title,
+                'time': time_str,
+                'video_url': video_url if video_url else "",
+                'recurrence': self.recurrence_type,
+                'snooze_enabled': True,
+                'snooze_interval': 5,
+                'max_snoozes': 3,
+                'volume': 80,
+                'vibrate': True,
+                'browser_preference': 'brave',
+                'enabled': True,
+                'is_active': True,
+                'days_of_week': [0, 1, 2, 3, 4, 5, 6] if self.recurrence_type == "weekly" else []
+            }
+            
+            # Guardar alarma
+            alarm_id = app.alarm_manager.add_alarm(alarm_data)
+            
+            if alarm_id:
+                # Calcular tiempo hasta alarma
+                time_until_text = self._calculate_time_until()
+                
+                # Mostrar confirmación
+                recurrence_text = {
+                    "none": "una vez",
+                    "daily": "diariamente",
+                    "weekly": "semanalmente"
+                }.get(self.recurrence_type, "")
+                
+                self._show_success(f"✅ Alarma '{title}' programada para las {time_str} ({recurrence_text})\n{time_until_text}")
+                
+                # Cerrar diálogo
+                if self.dialog:
+                    self.dialog.dismiss()
+            else:
+                self._show_error("❌ No se pudo crear la alarma. Verifica que no sea duplicada.")
+            
+        except Exception as e:
+            logger.error(f"Error guardando alarma: {e}")
+            self._show_error(f"❌ Error al guardar la alarma: {str(e)}")
+    
+    def _cancel_alarm(self, instance):
+        """
+        Cancela la creación de la alarma
+        """
+        if self.dialog:
+            self.dialog.dismiss()
+    
+    def _show_error(self, message):
+        """
+        Muestra mensaje de error
+        """
+        from kivymd.uix.snackbar import Snackbar
+        snackbar = Snackbar(
+            text=message,
+            bg_color=(1, 0, 0, 0.8)
+        )
+        snackbar.open()
+    
+    def _show_success(self, message):
+        """
+        Muestra mensaje de éxito
+        """
+        from kivymd.uix.snackbar import Snackbar
+        snackbar = Snackbar(
+            text=message,
+            bg_color=(0, 1, 0, 0.8)
+        )
+        snackbar.open()
+
 
 if __name__ == '__main__':
     try:
