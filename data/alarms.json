@@ -1,9 +1,9 @@
 [
   {
-    "id": "9162400b-8703-4f0a-8f62-30f76ea4e132",
-    "title": "Mi Alarmasd",
+    "id": "46c673e8-d739-484b-83cd-9e463fe1ba83",
+    "title": "Mi Alarma",
     "description": "",
-    "time": "21:12",
+    "time": "22:18",
     "recurrence": "daily",
     "recurrence_data": {},
     "enabled": true,
@@ -15,6 +15,34 @@
     "snooze_interval": 5,
     "max_snoozes": 3,
     "snooze_count": 0,
-    "created_at": "2025-11-06T21:13:03.944029",
-    "last_triggered": null,
-    "next_trigger": 
+    "created_at": "2025-11-06T22:17:02.210078",
+    "last_triggered": "2025-11-06T22:18:00.163164",
+    "next_trigger": "2025-11-07T22:18:00",
+    "days_of_week": [],
+    "custom_schedule": [],
+    "is_active": true
+  },
+  {
+    "id": "1afa4e85-ebe4-4190-b4d3-e037472ec92c",
+    "title": "Mi Alarma",
+    "description": "",
+    "time": "22:20",
+    "recurrence": "daily",
+    "recurrence_data": {},
+    "enabled": true,
+    "video_url": "https://www.youtube.com/watch?v=_tHsUHbiENY&list=RD_tHsUHbiENY&start_radio=1",
+    "browser_preference": "brave",
+    "sound_file": "",
+    "volume": 80,
+    "vibrate": true,
+    "snooze_interval": 5,
+    "max_snoozes": 3,
+    "snooze_count": 0,
+    "created_at": "2025-11-06T22:18:45.353657",
+    "last_triggered": "2025-11-06T22:20:00.345451",
+    "next_trigger": "2025-11-07T22:20:00",
+    "days_of_week": [],
+    "custom_schedule": [],
+    "is_active": true
+  }
+]

@@ -289,7 +289,7 @@ class MainScreen(MDScreen):
             font_style="H3",
             halign="center",
             theme_text_color="Custom",
-            text_color=(1, 1, 1, 1)
+            text_color=(1, 1, 1, 1)  # Blanco puro para máximo contraste
         )
         clock_layout.add_widget(self.current_time_label)
         
@@ -298,7 +298,7 @@ class MainScreen(MDScreen):
             font_style="Caption",
             halign="center",
             theme_text_color="Custom",
-            text_color=(0.9, 0.9, 0.9, 1)
+            text_color=(0.95, 0.95, 1, 1)  # Blanco azulado para mejor contraste
         )
         clock_layout.add_widget(self.current_date_label)
         
@@ -373,22 +373,52 @@ class MainScreen(MDScreen):
         
         # Alarma activa más cercana
         next_alarm_layout = MDBoxLayout(orientation='vertical', spacing=5)
-        next_alarm_layout.add_widget(MDLabel(text="Próxima", font_style="Caption"))
-        self.next_alarm_label = MDLabel(text="--:--", font_style="H6")
+        next_alarm_layout.add_widget(MDLabel(
+            text="Próxima",
+            font_style="Caption",
+            theme_text_color="Custom",
+            text_color=(0.2, 0.2, 0.2, 1)  # Gris oscuro para títulos
+        ))
+        self.next_alarm_label = MDLabel(
+            text="--:--",
+            font_style="H6",
+            theme_text_color="Custom",
+            text_color=(0.1, 0.1, 0.1, 1)  # Negro para valores
+        )
         next_alarm_layout.add_widget(self.next_alarm_label)
         stats_layout.add_widget(next_alarm_layout)
         
         # Total de alarmas
         total_layout = MDBoxLayout(orientation='vertical', spacing=5)
-        total_layout.add_widget(MDLabel(text="Total", font_style="Caption"))
-        self.total_label = MDLabel(text="0", font_style="H6")
+        total_layout.add_widget(MDLabel(
+            text="Total",
+            font_style="Caption",
+            theme_text_color="Custom",
+            text_color=(0.2, 0.2, 0.2, 1)  # Gris oscuro para títulos
+        ))
+        self.total_label = MDLabel(
+            text="0",
+            font_style="H6",
+            theme_text_color="Custom",
+            text_color=(0.1, 0.1, 0.1, 1)  # Negro para valores
+        )
         total_layout.add_widget(self.total_label)
         stats_layout.add_widget(total_layout)
         
         # Estado del sistema
         status_layout = MDBoxLayout(orientation='vertical', spacing=5)
-        status_layout.add_widget(MDLabel(text="Estado", font_style="Caption"))
-        self.status_label = MDLabel(text="Activo", font_style="H6")
+        status_layout.add_widget(MDLabel(
+            text="Estado",
+            font_style="Caption",
+            theme_text_color="Custom",
+            text_color=(0.2, 0.2, 0.2, 1)  # Gris oscuro para títulos
+        ))
+        self.status_label = MDLabel(
+            text="Activo",
+            font_style="H6",
+            theme_text_color="Custom",
+            text_color=(0.1, 0.1, 0.1, 1)  # Negro para valores
+        )
         status_layout.add_widget(self.status_label)
         stats_layout.add_widget(status_layout)
         
@@ -423,7 +453,9 @@ class MainScreen(MDScreen):
             size_hint=(0.5, 1),
             font_size="16sp",
             elevation=8,
-            on_release=self._quick_add_alarm
+            on_release=self._quick_add_alarm,
+            theme_text_color="Custom",
+            text_color=(1, 1, 1, 1)  # Texto blanco para máximo contraste
         )
         quick_button.md_bg_color = (0.0, 0.75, 0.5, 1)  # Verde azulado moderno
         buttons_grid.add_widget(quick_button)
@@ -434,7 +466,9 @@ class MainScreen(MDScreen):
             size_hint=(0.5, 1),
             font_size="16sp",
             elevation=8,
-            on_release=self._add_alarm
+            on_release=self._add_alarm,
+            theme_text_color="Custom",
+            text_color=(1, 1, 1, 1)  # Texto blanco para máximo contraste
         )
         full_button.md_bg_color = (0.3, 0.4, 0.9, 1)  # Azul índigo
         buttons_grid.add_widget(full_button)
@@ -446,7 +480,9 @@ class MainScreen(MDScreen):
             height=45,
             font_size="16sp",
             elevation=6,
-            on_release=self._open_config
+            on_release=self._open_config,
+            theme_text_color="Custom",
+            text_color=(1, 1, 1, 1)  # Texto blanco para máximo contraste
         )
         config_button.md_bg_color = (0.5, 0.2, 0.8, 1)  # Púrpura profundo
         buttons_grid.add_widget(config_button)
@@ -489,11 +525,14 @@ class MainScreen(MDScreen):
         status_text.add_widget(MDLabel(
             text="Sistema Activo",
             font_style="H6",
-            theme_text_color="Primary"
+            theme_text_color="Custom",
+            text_color=(0.2, 0.2, 0.2, 1)  # Gris oscuro para mejor contraste
         ))
         status_text.add_widget(MDLabel(
             text="✅ Todas las funciones operativas",
-            font_style="Caption"
+            font_style="Caption",
+            theme_text_color="Custom",
+            text_color=(0.3, 0.3, 0.3, 1)  # Gris medio para texto secundario
         ))
         status_layout.add_widget(status_text)
         
@@ -1385,7 +1424,9 @@ class AlarmTimePickerDialog(BoxLayout):
             hint_text="Título de la alarma (ej: Despertar, Gym, Reunión)",
             size_hint_y=None,
             height=50,
-            text="Mi Alarma"
+            text="Mi Alarma",
+            theme_text_color="Custom",
+            text_color=(0.1, 0.1, 0.1, 1)  # Texto negro para mejor contraste
         )
         self.add_widget(self.title_field)
         
@@ -1404,7 +1445,8 @@ class AlarmTimePickerDialog(BoxLayout):
         time_selector_layout.add_widget(MDLabel(
             text="⏰ Hora de la Alarma",
             font_style="H6",
-            theme_text_color="Primary",
+            theme_text_color="Custom",
+            text_color=(0.1, 0.1, 0.1, 1),  # Negro para mejor contraste
             halign="center"
         ))
         
@@ -1413,12 +1455,20 @@ class AlarmTimePickerDialog(BoxLayout):
         
         # Hora
         hour_layout = MDBoxLayout(orientation='vertical', spacing=5)
-        hour_layout.add_widget(MDLabel(text="Hora", font_style="Caption", halign="center"))
+        hour_layout.add_widget(MDLabel(
+            text="Hora",
+            font_style="Caption",
+            halign="center",
+            theme_text_color="Custom",
+            text_color=(0.2, 0.2, 0.2, 1)  # Gris oscuro
+        ))
         
         hour_picker_layout = BoxLayout(orientation='horizontal', spacing=5, size_hint_y=None, height=60)
         
         dec_hour_btn = MDIconButton(
             icon="minus-circle",
+            theme_text_color="Custom",
+            text_color=(0.1, 0.1, 0.1, 1),  # Icono negro
             on_release=self._decrease_hour
         )
         hour_picker_layout.add_widget(dec_hour_btn)
@@ -1427,12 +1477,15 @@ class AlarmTimePickerDialog(BoxLayout):
             text=f"{self.selected_hour:02d}",
             font_style="H3",
             halign="center",
-            theme_text_color="Primary"
+            theme_text_color="Custom",
+            text_color=(0.05, 0.05, 0.05, 1)  # Negro intenso para números
         )
         hour_picker_layout.add_widget(self.hour_label)
         
         inc_hour_btn = MDIconButton(
             icon="plus-circle",
+            theme_text_color="Custom",
+            text_color=(0.1, 0.1, 0.1, 1),  # Icono negro
             on_release=self._increase_hour
         )
         hour_picker_layout.add_widget(inc_hour_btn)
@@ -1445,17 +1498,27 @@ class AlarmTimePickerDialog(BoxLayout):
             text=":",
             font_style="H2",
             halign="center",
-            size_hint_x=0.2
+            size_hint_x=0.2,
+            theme_text_color="Custom",
+            text_color=(0.1, 0.1, 0.1, 1)  # Negro para separador
         ))
         
         # Minuto
         minute_layout = MDBoxLayout(orientation='vertical', spacing=5)
-        minute_layout.add_widget(MDLabel(text="Minuto", font_style="Caption", halign="center"))
+        minute_layout.add_widget(MDLabel(
+            text="Minuto",
+            font_style="Caption",
+            halign="center",
+            theme_text_color="Custom",
+            text_color=(0.2, 0.2, 0.2, 1)  # Gris oscuro
+        ))
         
         minute_picker_layout = BoxLayout(orientation='horizontal', spacing=5, size_hint_y=None, height=60)
         
         dec_minute_btn = MDIconButton(
             icon="minus-circle",
+            theme_text_color="Custom",
+            text_color=(0.1, 0.1, 0.1, 1),  # Icono negro
             on_release=self._decrease_minute
         )
         minute_picker_layout.add_widget(dec_minute_btn)
@@ -1464,12 +1527,15 @@ class AlarmTimePickerDialog(BoxLayout):
             text=f"{self.selected_minute:02d}",
             font_style="H3",
             halign="center",
-            theme_text_color="Primary"
+            theme_text_color="Custom",
+            text_color=(0.05, 0.05, 0.05, 1)  # Negro intenso para números
         )
         minute_picker_layout.add_widget(self.minute_label)
         
         inc_minute_btn = MDIconButton(
             icon="plus-circle",
+            theme_text_color="Custom",
+            text_color=(0.1, 0.1, 0.1, 1),  # Icono negro
             on_release=self._increase_minute
         )
         minute_picker_layout.add_widget(inc_minute_btn)
@@ -1484,7 +1550,8 @@ class AlarmTimePickerDialog(BoxLayout):
             text=self._calculate_time_until(),
             font_style="Caption",
             halign="center",
-            theme_text_color="Secondary"
+            theme_text_color="Custom",
+            text_color=(0.3, 0.3, 0.3, 1)  # Gris medio para tiempo restante
         )
         time_selector_layout.add_widget(self.time_until_label)
         
@@ -1493,21 +1560,30 @@ class AlarmTimePickerDialog(BoxLayout):
         
         # Selector de recurrencia
         recurrence_layout = MDBoxLayout(orientation='vertical', spacing=5, size_hint_y=None, height=80)
-        recurrence_layout.add_widget(MDLabel(text="🔁 Repetición", font_style="Caption"))
+        recurrence_layout.add_widget(MDLabel(
+            text="🔁 Repetición",
+            font_style="Caption",
+            theme_text_color="Custom",
+            text_color=(0.2, 0.2, 0.2, 1)  # Gris oscuro
+        ))
         
         recurrence_buttons = BoxLayout(orientation='horizontal', spacing=5, size_hint_y=None, height=40)
         
         once_btn = MDRaisedButton(
             text="Una vez",
             size_hint_x=0.33,
-            on_release=lambda x: self._set_recurrence("none", once_btn)
+            on_release=lambda x: self._set_recurrence("none", once_btn),
+            theme_text_color="Custom",
+            text_color=(1, 1, 1, 1)  # Texto blanco
         )
         recurrence_buttons.add_widget(once_btn)
         
         daily_btn = MDRaisedButton(
             text="Diaria",
             size_hint_x=0.33,
-            on_release=lambda x: self._set_recurrence("daily", daily_btn)
+            on_release=lambda x: self._set_recurrence("daily", daily_btn),
+            theme_text_color="Custom",
+            text_color=(1, 1, 1, 1)  # Texto blanco
         )
         daily_btn.md_bg_color = (0.0, 0.75, 0.5, 1)
         recurrence_buttons.add_widget(daily_btn)
@@ -1515,7 +1591,9 @@ class AlarmTimePickerDialog(BoxLayout):
         weekly_btn = MDRaisedButton(
             text="Semanal",
             size_hint_x=0.33,
-            on_release=lambda x: self._set_recurrence("weekly", weekly_btn)
+            on_release=lambda x: self._set_recurrence("weekly", weekly_btn),
+            theme_text_color="Custom",
+            text_color=(1, 1, 1, 1)  # Texto blanco
         )
         recurrence_buttons.add_widget(weekly_btn)
         
@@ -1527,7 +1605,9 @@ class AlarmTimePickerDialog(BoxLayout):
         self.video_field = MDTextField(
             hint_text="URL del video (opcional - se usa aleatorio si está vacío)",
             size_hint_y=None,
-            height=50
+            height=50,
+            theme_text_color="Custom",
+            text_color=(0.1, 0.1, 0.1, 1)  # Texto negro
         )
         self.add_widget(self.video_field)
         
@@ -1543,7 +1623,9 @@ class AlarmTimePickerDialog(BoxLayout):
             text="❌ Cancelar",
             size_hint_x=0.5,
             md_bg_color=(0.7, 0.3, 0.3, 1),
-            elevation=4
+            elevation=4,
+            theme_text_color="Custom",
+            text_color=(1, 1, 1, 1)  # Texto blanco para contraste
         )
         cancel_button.bind(on_release=self._cancel_alarm)
         
@@ -1551,7 +1633,9 @@ class AlarmTimePickerDialog(BoxLayout):
             text="✅ Guardar Alarma",
             size_hint_x=0.5,
             md_bg_color=(0.0, 0.75, 0.5, 1),
-            elevation=6
+            elevation=6,
+            theme_text_color="Custom",
+            text_color=(1, 1, 1, 1)  # Texto blanco para contraste
         )
         save_button.bind(on_release=self._save_alarm)
         
